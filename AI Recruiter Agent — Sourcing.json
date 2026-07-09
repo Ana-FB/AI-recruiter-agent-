@@ -1,0 +1,521 @@
+{
+  "name": "AI Recruiter Agent — Sourcing",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🤖 AI Recruiter Agent — Sourcing\n\n**¿Qué hace ?**\nRecibe la descripción de una vacante por Slack, busca candidatos en LinkedIn vía Google, los evalúa con un score de match (0-100) y guarda automáticamente en Airtable los que superen el umbral de 60 puntos.\n\n---\n\n**Flujo principal:**\n1. **Slack Trigger** → escucha mensajes en el workspace\n2. **Filtro Bot** → descarta mensajes de bots (evita loops)\n3. **¿Es una vacante?** → mensajes < 15 chars reciben saludo; los demás pasan al agente\n4. **Slack Send Procesando** → respuesta inmediata: \"Estoy buscando...\"\n5. **AI Recruiter Agent** → analiza la vacante, busca candidatos, calcula scores y guarda en Airtable\n6. **Slack Send Respuesta** → envía el resumen rankeado al canal\n\n---\n\n**Scoring:** Hard skills 40% · Seniority 20% · Industria 10% · Inglés 10% · Liderazgo 10% · Ubicación 10%\n\n**Umbral de corte:** score ≥ 60 → se guarda en Airtable · **Límites:** 10 perfiles por búsqueda · 2 búsquedas por conversación · 10 guardados por conversación",
+        "height": 628,
+        "width": 716,
+        "color": 4
+      },
+      "id": "sticky-note-main",
+      "name": "Nota Principal",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "trigger": [
+          "message"
+        ],
+        "watchWorkspace": true,
+        "options": {}
+      },
+      "id": "ag01",
+      "name": "Slack Trigger",
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        752,
+        256
+      ],
+      "webhookId": "1b7fe0a8-013a-4b46-881f-67bf5e7cae01",
+      "credentials": {
+        "slackApi": {
+          "id": "P3iqyEnYbigdRi0T",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bot-check-001",
+              "leftValue": "={{ $json.bot_id || $json.subtype || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "filtro-bot-001",
+      "name": "Filtro Bot",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        928,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "15ff1074-3e0e-4d98-bbbe-9fe4b2d33bde",
+              "leftValue": "={{ $json.text ? $json.text.length : 0 }}",
+              "rightValue": 15,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "6461859b-d03e-4fbe-858c-c3ac097152b1",
+      "name": "¿Es una vacante?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.channel }}",
+          "mode": "id"
+        },
+        "text": "Entendido, estoy buscando candidatos en LinkedIn... dame un momento.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slack-send-procesando",
+      "name": "Slack Send Procesando",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1232,
+        240
+      ],
+      "webhookId": "9196ac14-56c2-4174-a5d3-d0b05c038448",
+      "credentials": {
+        "slackApi": {
+          "id": "P3iqyEnYbigdRi0T",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Slack Trigger').item.json.text }}",
+        "options": {
+          "systemMessage": "# AI RECRUITER SENIOR — SOURCING AGENT\n\nEres un AI Recruiter Senior especializado en Talent Acquisition IT. Tenés acceso a buscar_candidatos para encontrar perfiles LinkedIn en Google, y a herramientas para guardar y consultar candidatos en Airtable.\n\n## FLUJO DE TRABAJO\n\nCuando recibas una vacante o job description:\n\n1. Analizá la descripción y extraé hard skills, soft skills, seniority, stack, idioma, ubicación.\n2. Llamá a consultar_shortlist para obtener URLs ya guardadas (evitar duplicados).\n3. Construí una query: site:linkedin.com/in \"cargo\" \"skill\" \"ubicación\"\n4. Llamá a buscar_candidatos. Extraé nombre, cargo, URL LinkedIn, snippet, ubicación. Nunca inventar datos. Saltear URLs ya en Airtable.\n5. Calculá match score (0-100) por candidato.\n6. Para candidatos con score ≥ 60 y URL nueva: llamá a guardar_candidato_shortlist con todos los parámetros.\n7. Presentá resumen final rankeado.\n\n## SCORING\n- Hard skills: 40% | Seniority: 20% | Industria: 10% | Inglés: 10% | Liderazgo: 10% | Ubicación: 10%\n\n## SENIORITY\nJunior 0-2a | Semi Senior 2-4a | Senior +5a | Staff/Lead\n\n## LÍMITES\n- Máx 10 perfiles por búsqueda, máx 2 llamadas a buscar_candidatos, máx 10 saves por conversación.\n- Saludos y mensajes cortos: responder con texto sin usar herramientas.\n- Nunca inventar perfiles ni llamar herramientas en loops.\n\n## TONO\nProfesional, directo, humano. Siempre en español."
+        }
+      },
+      "id": "7c7cd67b-fee3-43d0-91f5-c067e0bf1f7a",
+      "name": "AI Recruiter Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1360,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Slack Trigger').item.json.channel }}",
+          "mode": "id"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slack-send-respuesta",
+      "name": "Slack Send Respuesta",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1632,
+        240
+      ],
+      "webhookId": "057270fd-97c5-4116-89f2-beb8aaa7703c",
+      "credentials": {
+        "slackApi": {
+          "id": "P3iqyEnYbigdRi0T",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign01",
+              "name": "output",
+              "value": "Hola! Soy tu AI Recruiter. Compartime la vacante o job description y busco los mejores candidatos en LinkedIn para vos.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "74a6cbd2-949d-408e-9128-27ab9cf740d8",
+      "name": "Respuesta Saludo",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Slack Trigger').item.json.channel }}",
+          "mode": "id"
+        },
+        "text": "={{ $('Respuesta Saludo').item.json.output }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slack-send-saludo",
+      "name": "Slack Send Saludo",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        416
+      ],
+      "webhookId": "d712776a-b272-4f7f-aead-852a3047e6e9",
+      "credentials": {
+        "slackApi": {
+          "id": "P3iqyEnYbigdRi0T",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "recruiter-session",
+        "contextWindowLength": 20
+      },
+      "id": "8f629a67-6d6d-4e98-9350-40080f081496",
+      "name": "Memoria de Sesión",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1376,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "id": "32cd6fa0-0120-43b8-8608-30b05455c810",
+      "name": "Anthropic Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1232,
+        432
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "3x6FIqX5I9ZL7Eky",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Busca candidatos en LinkedIn según cargo, skills y ubicación.",
+        "url": "https://serpapi.com/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "serpApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "=google"
+            },
+            {
+              "name": "q",
+              "value": "=={{ $fromAI('searchQuery', 'Query de búsqueda') }}"
+            },
+            {
+              "name": "num",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2539fe1-7c0b-40a6-b0b9-9ecb9e5d44e1",
+      "name": "buscar_candidatos",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        1520,
+        432
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "X00nQ4GRPOJE742P",
+          "name": "Unnamed credential"
+        },
+        "serpApi": {
+          "id": "ysqvU26QyJJgzx3d",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Guarda un candidato en el shortlist de Airtable. Solo cuando score ≥ 60.",
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/appncUx0QejyZHgSx/tblrjkRdvsqXZOGV0",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"fields\": {\n    \"Nombre\": \"{{ $fromAI('nombre', 'Nombre completo') }}\",\n    \"Rol Actual\": \"{{ $fromAI('rol_actual', 'Cargo actual') }}\",\n    \"Ubicación\": \"{{ $fromAI('ubicacion', 'Ciudad y país') }}\",\n    \"LinkedIn URL\": \"{{ $fromAI('linkedin_url', 'URL LinkedIn') }}\",\n    \"Experiencia\": \"{{ $fromAI('experiencia', 'Resumen de experiencia') }}\",\n    \"Educación\": \"{{ $fromAI('educacion', 'Formación académica') }}\",\n    \"Skills Match\": \"{{ $fromAI('skills_match', 'Skills que matchean') }}\",\n    \"Skills Faltantes\": \"{{ $fromAI('skills_faltantes', 'Skills faltantes') }}\",\n    \"Seniority\": \"{{ $fromAI('seniority', 'Junior/Semi Senior/Senior/Staff') }}\",\n    \"Match Score\": \"{{ $fromAI('match_score', 'Score 0-100') }}\",\n    \"Vacante Aplicada\": \"{{ $fromAI('vacante', 'Descripción de la vacante') }}\",\n    \"Estado\": \"Nuevo\"\n  }\n}",
+        "options": {}
+      },
+      "id": "5285f1c1-3bcc-46a5-bdbc-4cd472ac5d8f",
+      "name": "guardar_candidato_shortlist1",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        1680,
+        432
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "hAyfZsSU8nBSvSwV",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Consulta la shortlist de candidatos guardados en Airtable.",
+        "url": "https://api.airtable.com/v0/appncUx0QejyZHgSx/tblrjkRdvsqXZOGV0",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {}
+      },
+      "id": "1a6db2b5-4369-460e-8196-25dc3aba4263",
+      "name": "consultar_shortlist",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        1840,
+        432
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "hAyfZsSU8nBSvSwV",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "Filtro Bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro Bot": {
+      "main": [
+        [
+          {
+            "node": "¿Es una vacante?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es una vacante?": {
+      "main": [
+        [
+          {
+            "node": "Slack Send Procesando",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Saludo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Send Procesando": {
+      "main": [
+        [
+          {
+            "node": "AI Recruiter Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Saludo": {
+      "main": [
+        [
+          {
+            "node": "Slack Send Saludo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Recruiter Agent": {
+      "main": [
+        [
+          {
+            "node": "Slack Send Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Recruiter Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria de Sesión": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Recruiter Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buscar_candidatos": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Recruiter Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "guardar_candidato_shortlist1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Recruiter Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_shortlist": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Recruiter Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "bc00e295-edfc-4766-a76c-e782bbc4cd85",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "38ee23dda673260744c1d583e276366dc7fe027add2b91549715a7f87ae733f9"
+  },
+  "nodeGroups": [],
+  "id": "ujw5fAg63ZbTEpoo",
+  "tags": []
+}
