@@ -190,27 +190,6 @@ Agente de IA conversacional construido en **n8n** que actúa como AI Recruiter S
 - Cuenta de [SerpAPI](https://serpapi.com) con API key
 - Cuenta de [Airtable](https://airtable.com) con una base y tabla configurada
 
-### Pasos
-
-1. Importar el workflow JSON en n8n
-2. Configurar las credenciales:
-   - **Anthropic account** → API key de Anthropic
-   - **Slack account** → token de la Slack App
-   - **Airtable Personal Access Token account** → token de Airtable
-3. En el nodo `buscar_candidatos`, reemplazar el valor de `api_key` con tu API key de SerpAPI
-4. Verificar el ID de la base y tabla de Airtable en los nodos `guardar_candidato_shortlist` y `consultar_shortlist`
-
-### Configuración de la Slack App
-
-1. Crear una nueva app en [https://api.slack.com/apps](https://api.slack.com/apps) usando un manifest
-2. Habilitar **Event Subscriptions** y agregar la URL del webhook de n8n:
-   ```
-   https://tu-dominio.com/webhook/TU_WEBHOOK_ID
-   ```
-3. Suscribirse al evento `message.channels`
-4. Instalar la app en el workspace y agregarla al canal deseado
-5. Activar el workflow en n8n **antes** de verificar el webhook en Slack
-
 ---
 
 ## Cómo usar
