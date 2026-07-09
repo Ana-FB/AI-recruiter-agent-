@@ -279,8 +279,6 @@ Próximos pasos sugeridos: ...
 ## 👤 Autor
 
 **Ana Ferreira**  
-HR Operations Analyst · People Analytics · HR Automation Specialist · BI & Data Analyst  
-SQL · Power BI · Looker Studio · n8n · Make · SAP SuccessFactors
 
 📩 **Contacto:** [ani.fb95@gmail.com](mailto:ani.fb95@gmail.com) · [LinkedIn](https://www.linkedin.com/in/anaferreirabezerra) · [WhatsApp](https://wa.me/5491135077374)
 
