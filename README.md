@@ -9,9 +9,8 @@
 
 Agente de IA conversacional construido en **n8n** que actúa como AI Recruiter Senior especializado en Talent Acquisition IT. Recibe la descripción de una vacante por Slack, busca candidatos en LinkedIn, los evalúa con scoring automático y guarda los mejores en un shortlist en Airtable.
 
-> 👤 **Creado por [Ana Ferreira](https://www.linkedin.com/in/anaferreirabezerra)** — HR Operations Analyst · People Analytics · HR Automation Specialist · 📩 [ani.fb95@gmail.com](mailto:ani.fb95@gmail.com) · [WhatsApp](https://wa.me/5491135077374)
+> 👤 **Creado por [Ana Ferreira](https://www.linkedin.com/in/anaferreirabezerra)**· 📩 [ani.fb95@gmail.com](mailto:ani.fb95@gmail.com) · [WhatsApp](https://wa.me/5491135077374)
 
-> 🔒 **El workflow no se incluye en este repositorio.** Si estás interesado/a en implementar este agente en tu empresa, podés contactarme para una consultoría de implementación personalizada.
 
 <img width="1382" height="470" alt="image" src="https://github.com/user-attachments/assets/546765cf-1240-465b-af2b-deda32bbe98b" />
 
